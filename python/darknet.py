@@ -45,7 +45,7 @@ class METADATA(Structure):
                 ("names", POINTER(c_char_p))]
     
 #lib = CDLL("libdarknet.so", RTLD_GLOBAL)
-lib = CDLL("/home/whatacg/darknet/libdarknet.so", RTLD_GLOBAL)
+lib = CDLL("../libdarknet.so", RTLD_GLOBAL)
 lib.network_width.argtypes = [c_void_p]
 lib.network_width.restype = c_int
 lib.network_height.argtypes = [c_void_p]
@@ -180,12 +180,14 @@ def convert_box_value(r):
 # 19.11.11
 # 시그널 받아서 처리 할 부분
 def gen_flag():
-    return 1
+    if (cv2.waitKey(33) == ord('c')):
+        return 1
+    else: return 0
 
 # 19.11.11
 def sanp_shot(flag, image, top, bottom, left, right, number):
-    snap_path = '/home/whatacg/darknet/snap_detected/snap'
-    roi_snap_path = '/home/whatacg/darknet/snap_detected/roi_snap'
+    snap_path = '../snap_detected/snap'
+    roi_snap_path = '../snap_detected/roi_snap'
 
     if(flag == 1):
         number+=1
@@ -207,7 +209,7 @@ def draw(image, boxes, number):
         bottom = min(image.shape[0], np.floor(y + h + 0.5).astype(int))
         center_x = left + int(w / 2)
         center_y = top + int(h / 2)
-
+        flag = 0
         height = image.shape[0]
         width = image.shape[1]
         # 크기는 비율 수정해서 변화 가능
@@ -223,11 +225,11 @@ def draw(image, boxes, number):
 
 # 19.11.10 
 if __name__ == "__main__": 
-    net = load_net(b"/home/whatacg/darknet/cfg/yolov2-tiny.cfg", b"/home/whatacg/darknet/yolov2-tiny.weights", 0) 
-    meta = load_meta(b"/home/whatacg/darknet/cfg/coco.data") 
+    net = load_net(b"../cfg/yolov2-tiny.cfg", b"../yolov2-tiny.weights", 0) 
+    meta = load_meta(b"../cfg/coco.data") 
     
-    cap = cv2.VideoCapture('/home/whatacg/blackbox_data/sample4.mkv')
-    #cap = cv2.VideoCapture('/home/whatacg/blackbox_data/4k1.mkv')
+    #cap = cv2.VideoCapture('../../blackbox_data/sample4.mkv')
+    cap = cv2.VideoCapture('../../blackbox_data/4k1.mkv')
     
     ret, frame = cap.read()
     height, width, channel = frame.shape   

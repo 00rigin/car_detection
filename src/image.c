@@ -400,7 +400,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                     //draw_center(im, cor[0], cor[1]);
                     
                     int fd;
-                    fd = open("/home/whatacg/darknet/cordinate.txt", O_CREAT | O_RDWR | O_APPEND, 0666);
+                    fd = open("../cordinate.txt", O_CREAT | O_RDWR | O_APPEND, 0666);
                     if (fd == -1)
                         printf("File open error!\n");
                     //printf("open OK\n"); // open check
