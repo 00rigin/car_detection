@@ -259,12 +259,12 @@ void snap_shot(image im, int left, int top, int right, int bot, float width){
     Mat snap = image_to_mat(im);
     Rect roi_rect(left, top, (right - left) , (bot-top));
     if (flag == 0){
-        imwrite("/home/whatacg/darknet/detect/detected.jpg", snap);
+        imwrite("../snap_detected/detected.jpg", snap);
     }
     
     Mat roi_snap = snap(roi_rect);
     if (flag == 0){
-        imwrite("/home/whatacg/darknet/detect/snap_detected.jpg", roi_snap);
+        imwrite("../snap_detect/snap_detected.jpg", roi_snap);
     }
     flag = 1;
 }

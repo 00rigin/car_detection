@@ -212,7 +212,7 @@ def draw(image, boxes, number):
         flag = 0
         height = image.shape[0]
         width = image.shape[1]
-        # 크기는 비율 수정해서 변화 가능
+        # change object size
         if( w >= width*0.2 and h >= height*0.2):
             if( ( center_y > 0 and center_y < height ) and ( center_x > 0 and center_x < width ) ):
                 print(center_x, center_y )
@@ -239,6 +239,7 @@ if __name__ == "__main__":
     while(cap.isOpened()): 
 
         ret, frame = cap.read() 
+        # change video size
         frame = frame[ int(height*0.5):int(height),  int(width*0.33) : int(width*0.66)]
         
         if not ret: 
