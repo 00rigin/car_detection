@@ -1,8 +1,45 @@
+#-*- conding: utf-8 -*-
 from ctypes import *
 import math
 import cv2
+import os
+import socket
+import sys
+import time
 import numpy as np
 import random
+from datetime import datetime
+import lane_detect # 만든것
+
+
+def connect_srv(time, path1, path2):
+    host = "192.168.0.143" 
+    port = "9999"
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+    print('connect success')
+
+    send_file(time, path1, path2)
+    client_socket.close()
+
+
+
+def send_file(time, path1, path2):
+    
+
+    file_1 = open(path1, "rb")
+    file_2 = open(path2, "rb")
+    img_size_1 = os.path.getsize(path1)
+    img_size_2 = os.path.getsize(path2)
+    img_1 = file_1.read(img_size_1)
+    img_2 = file_2.read(img_size_2)
+    file_1.close()
+    file_2.close()
+
+    client_socket.sendall(time)
+    client_socket.sendall(img_1)
+    client_socket.sendall(img_2)
 
 def sample(probs):
     s = sum(probs)
@@ -179,15 +216,29 @@ def convert_box_value(r):
 
 # 19.11.11
 # 시그널 받아서 처리 할 부분
-def gen_flag():
-    if (cv2.waitKey(33) == ord('c')):
+def gen_flag(x,y, vari):
+    #if (cv2.waitKey(33) == ord('c')):
+    #    return 1
+    #else: return 0
+
+    l_lines = lane_detect.send_to_darknet()
+    line_x = lane_detect.compute_model_inverse(l_lines, y)
+    if x<float(line_x+vari) and x>float(line_x):
         return 1
     else: return 0
+
+
+
 
 # 19.11.11
 def sanp_shot(flag, image, top, bottom, left, right, number):
     snap_path = '../snap_detected/snap'
     roi_snap_path = '../snap_detected/roi_snap'
+
+    #시간 string으로 넘겨 줄때 사용
+    now = datetime.now()
+    time = now.year+now.month+now.day+now.hour+now.minute+now.second
+    
 
     if(flag == 1):
         number+=1
@@ -196,6 +247,8 @@ def sanp_shot(flag, image, top, bottom, left, right, number):
         cv2. imwrite(snap_path ,  image)
         snap = image[ top : bottom , left : right ]
         cv2. imwrite(roi_snap_path ,  snap)
+    #    connect_srv(time, snap_path, roi_path)
+
     
     return number
         
@@ -208,54 +261,84 @@ def draw(image, boxes, number):
         right = min(image.shape[1], np.floor(x + w + 0.5).astype(int)) 
         bottom = min(image.shape[0], np.floor(y + h + 0.5).astype(int))
         center_x = left + int(w / 2)
-        center_y = top + int(h / 2)
+        center_y = top + int(h*3/4)
         flag = 0
         height = image.shape[0]
         width = image.shape[1]
         # change object size
-        if( w >= width*0.2 and h >= height*0.2):
+        if( w >= width*0.1 and h >= height*0.1389):
             if( ( center_y > 0 and center_y < height ) and ( center_x > 0 and center_x < width ) ):
-                print(center_x, center_y )
-                flag = gen_flag()
-                number = sanp_shot(flag, image, top, bottom, left, right, number)
+                #print(center_x, center_y )
+                # lane_detect 에서 line 받기.
+                # lane_detect 로 보내서 확인하기.
+                # gen_flag 가 차선 침범 확인함.
+                flag = gen_flag(center_x, center_y, 10)
+                if flag:
+                    number = sanp_shot(flag, image, top, bottom, left, right, number)
                 cv2.rectangle(image, (left, top), (right, bottom), (255, 0, 0), 2) 
                 cv2.circle(image, (center_x, center_y), 5, (0,0,255), 5)
+
     return number
     
 
 # 19.11.10 
 if __name__ == "__main__": 
+
+   
     net = load_net(b"../cfg/yolov2-tiny.cfg", b"../yolov2-tiny.weights", 0) 
     meta = load_meta(b"../cfg/coco.data") 
     
     #cap = cv2.VideoCapture('../../blackbox_data/sample4.mkv')
-    cap = cv2.VideoCapture('../../blackbox_data/4k1.mkv')
+    cap = cv2.VideoCapture('../../blackbox_data/test3.mov')
     
     ret, frame = cap.read()
     height, width, channel = frame.shape   
     global number
     number = 0
 
+
+    """
+    ret, frame = cap.read()
+    if frame.shape[0] !=540: # resizing for challenge video
+        frame = cv2.resize(frame, None, fx=3/4, fy=3/4, interpolation=cv2.INTER_AREA) 
+    result = detect_lanes_img(frame)
+
+    cv2.imshow('result',result)
+
+    #out.write(frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+    """
+
     while(cap.isOpened()): 
 
         ret, frame = cap.read() 
         # change video size
-        frame = frame[ int(height*0.5):int(height),  int(width*0.33) : int(width*0.66)]
+        #frame = frame[ int(height*0.5):int(height),  int(width*0.2) : int(width*0.8)]
         
         if not ret: 
             break 
         #print(type(frame)) 
+
+        # lane_detect 시작
+        if frame.shape[0] !=540: # resizing for challenge video
+            frame = cv2.resize(frame, None, fx=3/4, fy=3/4, interpolation=cv2.INTER_AREA) 
+        result = lane_detect.detect_lanes_img(frame)
         
-        r = detect(net, meta, frame) 
+        # 차량 검출 시작
+        r = detect(net, meta, frame)
+
 
         boxes = convert_box_value(r) 
 
         number = draw(frame, boxes, number) 
 
+        _frame = cv2.addWeighted(frame, 0.8, result, 1, 0.)
+        cv2.imshow('frame', _frame) 
         
-        cv2.imshow('frame', frame) 
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'): 
+        if (cv2.waitKey(33) == ord('q')):
             break
 
 
